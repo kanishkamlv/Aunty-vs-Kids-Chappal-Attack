@@ -8,6 +8,9 @@
     <style>
         :root {
             --safe-bottom: env(safe-area-inset-bottom, 20px);
+            --safe-top: env(safe-area-inset-top, 10px);
+            --safe-left: env(safe-area-inset-left, 15px);
+            --safe-right: env(safe-area-inset-right, 15px);
         }
         body {
             margin: 0;
@@ -32,17 +35,18 @@
             background: #000;
         }
         canvas {
-            background: #87CEEB;
+            /* Changed background from #87CEEB (sky blue) to #000 (black) */
+            background: #000;
             display: block;
             max-width: 100%;
             max-height: 100%;
-            image-rendering: pixelated; /* Keeps it sharp on high DPI screens */
+            image-rendering: pixelated;
         }
         #ui {
             position: absolute;
-            top: env(safe-area-inset-top, 10px);
-            left: 15px;
-            right: 15px;
+            top: var(--safe-top);
+            left: var(--safe-left);
+            right: var(--safe-right);
             display: flex;
             justify-content: space-between;
             color: #d946ef;
@@ -67,21 +71,22 @@
             background: #ef4444;
             transition: width 0.3s ease;
         }
-        /* Fully responsive mobile controls */
+        /* Controls returned to bottom positioning */
         .touch-controls {
             position: absolute;
             bottom: calc(var(--safe-bottom) + 10px);
-            width: 100%;
+            left: var(--safe-left);
+            right: var(--safe-right);
+            width: calc(100% - var(--safe-left) - var(--safe-right));
             display: none;
             justify-content: space-between;
-            padding: 0 5%;
             z-index: 100;
             pointer-events: none;
         }
         .btn {
-            width: 55px; /* Smaller button size */
+            width: 55px;
             height: 55px;
-            background: rgba(217, 70, 239, 0.3); /* Unified color for all buttons */
+            background: rgba(217, 70, 239, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.3);
             border-radius: 50%;
             display: flex;
@@ -135,7 +140,6 @@ const ctx = canvas.getContext('2d');
 const scoreEl = document.getElementById('score');
 const healthFill = document.getElementById('health-fill');
 
-// Fixed virtual resolution
 const V_WIDTH = 800;
 const V_HEIGHT = 500;
 
@@ -149,20 +153,16 @@ let score = 0;
 let health = 100;
 let cameraX = 0;
 let gameActive = true;
-let scale = 1;
 
 function resize() {
-    // Set internal canvas size to virtual resolution
     canvas.width = V_WIDTH;
     canvas.height = V_HEIGHT;
-
-    // Determine if touch is supported
     if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
         document.getElementById('mobile-ui').style.display = 'flex';
     }
 }
 window.addEventListener('resize', resize);
-window.addEventListener('orientationchange', resize);
+window.addEventListener('orientationchange', () => setTimeout(resize, 100));
 resize();
 
 const keys = {};
