@@ -8,6 +8,7 @@
     <style>
         :root {
             --safe-bottom: env(safe-area-inset-bottom, 20px);
+            --safe-top: env(safe-area-inset-top, 10px);
         }
         body {
             margin: 0;
@@ -40,7 +41,7 @@
         }
         #ui {
             position: absolute;
-            top: env(safe-area-inset-top, 10px);
+            top: var(--safe-top);
             left: 15px;
             right: 15px;
             display: flex;
@@ -67,10 +68,10 @@
             background: #ef4444;
             transition: width 0.3s ease;
         }
-        /* Fully responsive mobile controls */
+        /* Mobile controls positioned under the UI elements at the top */
         .touch-controls {
             position: absolute;
-            bottom: calc(var(--safe-bottom) + 10px);
+            top: calc(var(--safe-top) + 45px); /* Positioned below Chai/Health */
             width: 100%;
             display: none;
             justify-content: space-between;
@@ -79,9 +80,9 @@
             pointer-events: none;
         }
         .btn {
-            width: 55px; /* Smaller button size */
+            width: 55px;
             height: 55px;
-            background: rgba(217, 70, 239, 0.3); /* Unified color for all buttons */
+            background: rgba(217, 70, 239, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.3);
             border-radius: 50%;
             display: flex;
@@ -108,8 +109,10 @@
 
 <div id="game-container">
     <div id="ui">
-        <div>Chai: <span id="score">0</span></div>
-        <div style="display: flex; flex-direction: column; align-items: flex-end;">
+        <div id="left-ui-group">
+            <div>Chai: <span id="score">0</span></div>
+        </div>
+        <div id="right-ui-group" style="display: flex; flex-direction: column; align-items: flex-end;">
             Health
             <div class="health-bar-bg"><div id="health-fill"></div></div>
         </div>
