@@ -61,7 +61,7 @@
             height: 10px;
             background: #444;
             border: 1.5px solid #fff;
-            border-radius: 50px;
+            border-radius: 5px;
             overflow: hidden;
             margin-top: 4px;
         }
@@ -73,7 +73,7 @@
         }
         .touch-controls {
             position: absolute;
-            bottom: 40px; 
+            bottom: 200px !important; 
             padding: 0 25px;
             left: 0;
             right: 0;
@@ -85,8 +85,8 @@
         .btn {
             width: 65px;
             height: 65px;
-            background: rgba(0, 0, 0, 0.6);
-            border: 2px solid rgba(255, 255, 255, 0.8);
+            background: #000000; /* Solid Black Background */
+            border: 2px solid #ffffff; /* White border for visibility */
             border-radius: 50%;
             display: flex;
             justify-content: center;
@@ -98,9 +98,10 @@
             font-size: 18px;
             -webkit-tap-highlight-color: transparent;
             transition: transform 0.1s, background 0.1s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
         .btn:active { 
-            background: rgba(255, 255, 255, 0.3); 
+            background: #333333; 
             transform: scale(0.9); 
         }
         .d-pad { display: flex; gap: 15px; }
@@ -122,7 +123,8 @@
 <body>
 
 <div id="loader">
-    <div class="text-xl font-bold animate-pulse">LOADING ASSETS...</div>
+    <div class="text-xl font-bold animate-pulse">LOADING GAME...</div>
+    <div class="text-xs mt-2 opacity-50">Checking for Aunty's Chappals</div>
 </div>
 
 <div id="game-container">
@@ -174,9 +176,10 @@ const assetSources = {
     chappal: 'chappal.png',
     enemy: 'kid.png',
     bg: 'building_bg.png',
-    bg_portrait: 'Portrait.jpg', // Using the exact filename from your upload
+    bg_portrait: 'Portrait.jpg', // Updated to match your uploaded file extension
     chai: 'chai.png'
 };
+
 
 const images = {};
 let loadedImages = 0;
@@ -190,16 +193,14 @@ function loadAssets(callback) {
             loadedImages++;
             if (loadedImages === totalImages) {
                 loader.style.display = 'none';
-                initGameObjects(); // Re-init objects with correct heights
                 callback();
             }
         };
         images[key].onerror = () => {
-            console.warn(`Asset missing: ${key}`);
+            console.warn(`Failed to load ${key}, using placeholder`);
             loadedImages++;
             if (loadedImages === totalImages) {
                 loader.style.display = 'none';
-                initGameObjects();
                 callback();
             }
         };
@@ -207,10 +208,12 @@ function loadAssets(callback) {
 }
 
 function resize() {
+    // Detect portrait mode based on window dimensions
     const isPortrait = window.innerHeight > window.innerWidth;
     
     if (isPortrait) {
-        V_WIDTH = 450;
+        // Switch internal resolution to portrait-friendly aspect ratio
+        V_WIDTH = 500;
         V_HEIGHT = 800;
     } else {
         V_WIDTH = 800;
@@ -220,18 +223,13 @@ function resize() {
     canvas.width = V_WIDTH;
     canvas.height = V_HEIGHT;
 
-    // Reposition ground based on new height
-    if (platforms.length > 0) {
-        platforms[0].y = V_HEIGHT - 15;
-    }
-
     if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
         document.getElementById('mobile-ui').style.display = 'flex';
     }
 }
-
 window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', () => setTimeout(resize, 100));
+resize();
 
 const keys = {};
 window.addEventListener('keydown', e => {
@@ -263,7 +261,7 @@ class Player {
         this.width = 60;
         this.height = 80;
         this.x = 100;
-        this.y = 100;
+        this.y = 300;
         this.vx = 0;
         this.vy = 0;
         this.grounded = false;
@@ -293,15 +291,11 @@ class Player {
             }
         });
 
-        const floorY = V_HEIGHT - 15; 
-        if (this.y > floorY - this.height) { 
-            this.y = floorY - this.height; 
-            this.vy = 0; 
-            this.grounded = true; 
-        }
-        
+        const floorY = V_HEIGHT - 10; // Floor detection shifted down
+        if (this.y > floorY - this.height) { this.y = floorY - this.height; this.vy = 0; this.grounded = true; }
         if (this.x < 0) this.x = 0;
         if (this.x > LEVEL_WIDTH - this.width) this.x = LEVEL_WIDTH - this.width;
+
         if (this.invulnerable > 0) this.invulnerable--;
 
         cameraX = this.x - V_WIDTH / 2 + this.width / 2;
@@ -373,8 +367,6 @@ class Enemy {
         if (this.dead) return;
         this.x += this.dir * 2;
         if (Math.abs(this.x - this.startX) > this.range) this.dir *= -1;
-        // Keep grounded to current floor height
-        this.y = V_HEIGHT - 15 - this.h;
     }
     draw() {
         if (this.dead) return;
@@ -390,43 +382,31 @@ class Enemy {
     }
 }
 
-let player = new Player();
+const player = new Player();
 const chappals = [];
 const enemies = [];
-const platforms = [];
+const platforms = [{x: 0, y: V_HEIGHT - 10, w: LEVEL_WIDTH, h: 10}]; // Thin floor bar
+
+for (let i = 1; i < 45; i++) {
+    platforms.push({
+        x: i * 220, 
+        y: 180 + Math.random() * 200, 
+        w: 120 + Math.random() * 150, 
+        h: 8 // Thin floating platforms
+    });
+}
+
+for (let i = 0; i < 60; i++) {
+    enemies.push(new Enemy(600 + i * 160, 400, 40 + Math.random() * 120));
+}
+
 const coins = [];
-
-function initGameObjects() {
-    platforms.length = 0;
-    enemies.length = 0;
-    coins.length = 0;
-    
-    // Thin Floor
-    platforms.push({x: 0, y: V_HEIGHT - 15, w: LEVEL_WIDTH, h: 15}); 
-
-    // Floating platforms
-    for (let i = 1; i < 40; i++) {
-        platforms.push({
-            x: i * 350, 
-            y: 200 + Math.random() * (V_HEIGHT - 350), 
-            w: 120 + Math.random() * 80, 
-            h: 10 
-        });
-    }
-
-    // Grounded enemies
-    for (let i = 0; i < 50; i++) {
-        enemies.push(new Enemy(900 + i * 300, V_HEIGHT - 75, 60 + Math.random() * 100));
-    }
-
-    // Chai Collectibles
-    for (let i = 0; i < 100; i++) {
-        coins.push({
-            x: 500 + i * 150, 
-            y: 150 + Math.random() * (V_HEIGHT - 300), 
-            collected: false
-        });
-    }
+for (let i = 0; i < 100; i++) {
+    coins.push({
+        x: 400 + i * 100, 
+        y: 120 + Math.random() * 250, 
+        collected: false
+    });
 }
 
 let lastThrow = 0;
@@ -439,24 +419,21 @@ function throwChappal() {
 }
 
 function drawBackground() {
+    // Check orientation
     const isPortrait = window.innerHeight > window.innerWidth;
-    let img = images.bg;
     
-    if (isPortrait && images.bg_portrait && images.bg_portrait.complete) {
-        img = images.bg_portrait;
+    let currentBg = images.bg;
+    // Use Portrait.jpg if in portrait mode and the asset is loaded
+    if (isPortrait && images.bg_portrait && images.bg_portrait.complete && images.bg_portrait.naturalWidth !== 0) {
+        currentBg = images.bg_portrait;
     }
-
-    if (!img || !img.complete) return;
-
-    // "Cover" scaling logic
-    const scale = Math.max(V_WIDTH / img.width, V_HEIGHT / img.height);
-    const drawW = img.width * scale;
-    const drawH = img.height * scale;
     
-    const bgX = -(cameraX * 0.15) % drawW;
-
-    ctx.drawImage(img, bgX, (V_HEIGHT - drawH) / 2, drawW, drawH);
-    ctx.drawImage(img, bgX + drawW, (V_HEIGHT - drawH) / 2, drawW, drawH);
+    // Parallax background scrolling logic
+    const bgX = -(cameraX * 0.3) % V_WIDTH;
+    
+    // Draw background twice for seamless looping
+    ctx.drawImage(currentBg, bgX, 0, V_WIDTH, V_HEIGHT);
+    ctx.drawImage(currentBg, bgX + V_WIDTH, 0, V_WIDTH, V_HEIGHT);
 }
 
 function gameLoop() {
@@ -464,28 +441,25 @@ function gameLoop() {
         ctx.fillStyle = "rgba(0,0,0,0.85)";
         ctx.fillRect(0,0,V_WIDTH,V_HEIGHT);
         ctx.fillStyle = "white";
-        ctx.font = "bold 20px Arial";
+        ctx.font = "bold 28px Arial";
         ctx.textAlign = "center";
-        ctx.fillText("CHHI BETA, TUMSE YE UMEED NAHI THI!", V_WIDTH/2, V_HEIGHT/2 - 20);
-        ctx.font = "bold 32px Arial";
+        ctx.fillText("Chhi beta, tumse ye umeed nahi thi!", V_WIDTH/2, V_HEIGHT/2 - 20);
+        ctx.font = "bold 42px Arial";
         ctx.fillStyle = "#ff4444";
-        ctx.fillText("GAME OVER", V_WIDTH/2, V_HEIGHT/2 + 30);
+        ctx.fillText("Game Over", V_WIDTH/2, V_HEIGHT/2 + 40);
         return;
     }
-    
     ctx.clearRect(0, 0, V_WIDTH, V_HEIGHT);
     drawBackground();
 
-    // Platforms
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
     platforms.forEach(p => {
+        ctx.fillStyle = '#000000';
         ctx.fillRect(p.x - cameraX, p.y, p.w, p.h);
     });
 
     player.update();
     player.draw();
 
-    // Chappals
     for (let i = chappals.length - 1; i >= 0; i--) {
         const c = chappals[i];
         c.update();
@@ -501,19 +475,17 @@ function gameLoop() {
         if (!c.active) chappals.splice(i, 1);
     }
 
-    // Enemies
     enemies.forEach(e => {
         if (!e.dead) {
             e.update();
             e.draw();
-            if (player.x < e.x + e.w - 10 && player.x + player.width > e.x + 10 &&
+            if (player.x < e.x + e.w - 15 && player.x + player.width > e.x + 15 &&
                 player.y < e.y + e.h && player.y + player.height > e.y) {
                 player.takeDamage();
             }
         }
     });
 
-    // Coins
     coins.forEach(c => {
         if (!c.collected) {
             ctx.drawImage(images.chai, c.x - cameraX, c.y, 35, 35);
@@ -530,7 +502,6 @@ function gameLoop() {
 }
 
 window.onload = () => {
-    resize();
     loadAssets(gameLoop);
 };
 </script>
