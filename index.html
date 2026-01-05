@@ -1,3 +1,4 @@
+.png
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,169 +6,480 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>The Great Chappal Quest</title>
     <script src="https://cdn.tailwindcss.com"></script>
-
     <style>
         :root {
-            --safe-bottom: env(safe-area-inset-bottom);
-            --safe-left: env(safe-area-inset-left);
-            --safe-right: env(safe-area-inset-right);
+            --safe-bottom: env(safe-area-inset-bottom, 20px);
+            --safe-top: env(safe-area-inset-top, 10px);
+            --safe-left: env(safe-area-inset-left, 15px);
+            --safe-right: env(safe-area-inset-right, 15px);
         }
-
-        body, html {
+        body {
             margin: 0;
             padding: 0;
             overflow: hidden;
-            touch-action: none;
             background: #000;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            touch-action: none;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
-
-        #gameCanvas {
-            display: block;
-            margin: 0 auto;
-            background: #ffffff;
-        }
-
-        .touch-controls {
-            position: absolute;
-            bottom: calc(var(--safe-bottom) + 30px);
-            left: var(--safe-left);
-            right: var(--safe-right);
-            width: calc(100% - var(--safe-left) - var(--safe-right));
-            display: none;
-            justify-content: space-between;
-            z-index: 100;
-            padding: 0 25px;
-            pointer-events: none;
-        }
-
-        .touch-btn {
-            width: 62px;
-            height: 62px;
-            background: white;
-            border-radius: 50%;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        #game-container {
+            position: relative;
+            flex: 1;
+            width: 100%;
+            height: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 28px;
-            user-select: none;
-            touch-action: manipulation;
-            pointer-events: auto;
+            background: #000;
         }
+        canvas {
+            background: #000;
+            display: block;
+            max-width: 100%;
+            max-height: 100%;
+            image-rendering: pixelated;
+        }
+        #ui {
+            position: absolute;
+            top: var(--safe-top);
+            left: var(--safe-left);
+            right: var(--safe-right);
+            display: flex;
+            justify-content: space-between;
+            color: #d946ef;
+            font-weight: bold;
+            font-size: clamp(14px, 3.5vw, 20px);
+            text-shadow: 2px 2px #000;
+            pointer-events: none;
+            z-index: 50;
+            padding: 10px;
+        }
+        .health-bar-bg {
+            width: 100px;
+            height: 10px;
+            background: #444;
+            border: 1.5px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+        #health-fill {
+            width: 100%;
+            height: 100%;
+            background: #ef4444;
+            transition: width 0.3s ease;
+        }
+        .touch-controls {
+            position: absolute;
+            bottom: calc(var(--safe-bottom) + 30px);
+            padding: 0 25px;
+            left: 0;
+            right: 0;
+            display: none;
+            justify-content: space-between;
+            z-index: 100;
+            pointer-events: none;
+        }
+        .btn {
+            width: 60px;
+            height: 60px;
+            background: rgba(217, 70, 239, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-weight: bold;
+            user-select: none;
+            pointer-events: auto;
+            font-size: 16px;
+            backdrop-filter: blur(4px);
+            -webkit-tap-highlight-color: transparent;
+            transition: transform 0.1s;
+        }
+        .btn:active { 
+            background: rgba(217, 70, 239, 0.5); 
+            transform: scale(0.9); 
+        }
+        .d-pad { display: flex; gap: 15px; }
+        .action-btns { display: flex; gap: 15px; }
 
-        #restartBtn {
-            margin-top: 20px;
+        #loader {
+            position: absolute;
+            inset: 0;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #d946ef;
+            z-index: 1000;
         }
     </style>
 </head>
-
 <body>
+
+<div id="loader">
+    <div class="text-xl font-bold animate-pulse">LOADING GAME...</div>
+    <div class="text-xs mt-2 opacity-50">Checking for Aunty's Chappals</div>
+</div>
+
+<div id="game-container">
+    <div id="ui">
+        <div>Chai: <span id="score">0</span></div>
+        <div style="display: flex; flex-direction: column; align-items: flex-end;">
+            Health
+            <div class="health-bar-bg"><div id="health-fill"></div></div>
+        </div>
+    </div>
+    
     <canvas id="gameCanvas"></canvas>
 
-    <!-- MOBILE TOUCH BUTTONS -->
-    <div class="touch-controls">
-        <div id="moveLeft" class="touch-btn">⟵</div>
-        <div id="moveRight" class="touch-btn">⟶</div>
+    <div id="mobile-ui" class="touch-controls">
+        <div class="d-pad">
+            <div id="btn-left" class="btn">◀</div>
+            <div id="btn-right" class="btn">▶</div>
+        </div>
+        <div class="action-btns">
+            <div id="btn-jump" class="btn">UP</div>
+            <div id="btn-throw" class="btn">👞</div>
+        </div>
     </div>
+</div>
 
-    <script>
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.getElementById('score');
+const healthFill = document.getElementById('health-fill');
+const loader = document.getElementById('loader');
 
-        function resizeGame() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-        resizeGame();
-        window.addEventListener("resize", resizeGame);
+const V_WIDTH = 800;
+const V_HEIGHT = 500;
 
-        // =============================
-        // UPDATED IMAGE FILENAMES
-        // =============================
-     const assetSources = {
-    aunty: "aunty.png",
-    chappal: "chappal.png",
-    enemy: "kid.png",
-    bg: "building_bg.png",
-    portrait: "portrait.png",
-    chai: "chai.png"
+const GRAVITY = 0.45;
+const JUMP_FORCE = -13;
+const SPEED = 5.5;
+const CHAPPAL_SPEED = 12;
+const LEVEL_WIDTH = 10000;
+
+let score = 0;
+let health = 100;
+let cameraX = 0;
+let gameActive = true;
+
+// Corrected Asset paths (removed the double .png.png)
+const assetSources = {
+    aunty: 'aunty.png',
+    chappal: 'chappal.png',
+    enemy: 'kid.png',
+    bg: 'building_bg.png',
+    chai: 'chai.png'
 };
 
 
-        const assets = {};
-        let assetsLoaded = 0;
-        const totalAssets = Object.keys(assetSources).length;
+const images = {};
+let loadedImages = 0;
+const totalImages = Object.keys(assetSources).length;
 
-        function loadAssets() {
-            for (let key in assetSources) {
-                const img = new Image();
-                img.src = assetSources[key];
-                img.onload = () => {
-                    assetsLoaded++;
-                    if (assetsLoaded === totalAssets) startGame();
-                };
-                assets[key] = img;
+function loadAssets(callback) {
+    for (let key in assetSources) {
+        images[key] = new Image();
+        images[key].src = assetSources[key];
+        images[key].onload = () => {
+            loadedImages++;
+            if (loadedImages === totalImages) {
+                loader.style.display = 'none';
+                callback();
+            }
+        };
+        images[key].onerror = () => {
+            console.warn(`Failed to load ${key}, using placeholder`);
+            loadedImages++;
+            if (loadedImages === totalImages) {
+                loader.style.display = 'none';
+                callback();
+            }
+        };
+    }
+}
+
+function resize() {
+    canvas.width = V_WIDTH;
+    canvas.height = V_HEIGHT;
+    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+        document.getElementById('mobile-ui').style.display = 'flex';
+    }
+}
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => setTimeout(resize, 100));
+resize();
+
+const keys = {};
+window.addEventListener('keydown', e => {
+    keys[e.code] = true;
+    if (e.code === 'Space') {
+        e.preventDefault();
+        throwChappal();
+    }
+});
+window.addEventListener('keyup', e => keys[e.code] = false);
+
+const mobileKeys = { left: false, right: false, up: false };
+function setupTouchBtn(id, keyName) {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.addEventListener('touchstart', (e) => { e.preventDefault(); mobileKeys[keyName] = true; });
+    btn.addEventListener('touchend', (e) => { e.preventDefault(); mobileKeys[keyName] = false; });
+}
+setupTouchBtn('btn-left', 'left');
+setupTouchBtn('btn-right', 'right');
+setupTouchBtn('btn-jump', 'up');
+document.getElementById('btn-throw').addEventListener('touchstart', (e) => { 
+    e.preventDefault(); 
+    throwChappal(); 
+});
+
+class Player {
+    constructor() {
+        this.width = 60;
+        this.height = 80;
+        this.x = 100;
+        this.y = 300;
+        this.vx = 0;
+        this.vy = 0;
+        this.grounded = false;
+        this.facing = 1;
+        this.invulnerable = 0;
+    }
+
+    update() {
+        if (keys['ArrowLeft'] || mobileKeys.left) { this.vx = -SPEED; this.facing = -1; }
+        else if (keys['ArrowRight'] || mobileKeys.right) { this.vx = SPEED; this.facing = 1; }
+        else { this.vx *= 0.8; }
+
+        if ((keys['ArrowUp'] || keys['KeyW'] || mobileKeys.up) && this.grounded) {
+            this.vy = JUMP_FORCE;
+            this.grounded = false;
+        }
+
+        this.vy += GRAVITY;
+        this.x += this.vx;
+        this.y += this.vy;
+
+        this.grounded = false;
+        platforms.forEach(p => {
+            if (this.x < p.x + p.w && this.x + this.width > p.x &&
+                this.y + this.height > p.y && this.y + this.height < p.y + p.h + 15) {
+                if (this.vy > 0) { this.vy = 0; this.y = p.y - this.height; this.grounded = true; }
+            }
+        });
+
+        const floorY = V_HEIGHT - 40;
+        if (this.y > floorY - this.height) { this.y = floorY - this.height; this.vy = 0; this.grounded = true; }
+        if (this.x < 0) this.x = 0;
+        if (this.x > LEVEL_WIDTH - this.width) this.x = LEVEL_WIDTH - this.width;
+
+        if (this.invulnerable > 0) this.invulnerable--;
+
+        cameraX = this.x - V_WIDTH / 2 + this.width / 2;
+        cameraX = Math.max(0, Math.min(cameraX, LEVEL_WIDTH - V_WIDTH));
+    }
+
+    draw() {
+        if (this.invulnerable % 10 > 5) return;
+        ctx.save();
+        ctx.translate(-cameraX, 0);
+        if (this.facing === -1) {
+            ctx.scale(-1, 1);
+            ctx.drawImage(images.aunty, -this.x - this.width, this.y, this.width, this.height);
+        } else {
+            ctx.drawImage(images.aunty, this.x, this.y, this.width, this.height);
+        }
+        ctx.restore();
+    }
+
+    takeDamage() {
+        if (this.invulnerable <= 0) {
+            health -= 20;
+            this.invulnerable = 60;
+            healthFill.style.width = Math.max(0, health) + '%';
+            if (health <= 0) {
+                gameActive = false;
+                setTimeout(() => location.reload(), 3000);
             }
         }
-        loadAssets();
+    }
+}
 
-        // =============================
-        // ORIENTATION-BASED BACKGROUND
-        // =============================
-        let usePortraitBG = false;
+class Chappal {
+    constructor(x, y, dir) {
+        this.x = x;
+        this.y = y;
+        this.vx = dir * CHAPPAL_SPEED;
+        this.w = 35;
+        this.h = 25;
+        this.rotation = 0;
+        this.active = true;
+    }
+    update() {
+        this.x += this.vx;
+        this.rotation += 0.4;
+        if (this.x < cameraX - 100 || this.x > cameraX + V_WIDTH + 100) this.active = false;
+    }
+    draw() {
+        ctx.save();
+        ctx.translate(this.x + this.w/2 - cameraX, this.y + this.h/2);
+        ctx.rotate(this.rotation);
+        ctx.drawImage(images.chappal, -this.w/2, -this.h/2, this.w, this.h);
+        ctx.restore();
+    }
+}
 
-        function checkOrientation() {
-            usePortraitBG = window.innerHeight > window.innerWidth;
+class Enemy {
+    constructor(x, y, range) {
+        this.startX = x;
+        this.x = x;
+        this.y = y;
+        this.w = 50;
+        this.h = 60;
+        this.range = range;
+        this.dir = 1;
+        this.dead = false;
+    }
+    update() {
+        if (this.dead) return;
+        this.x += this.dir * 2;
+        if (Math.abs(this.x - this.startX) > this.range) this.dir *= -1;
+    }
+    draw() {
+        if (this.dead) return;
+        ctx.save();
+        ctx.translate(-cameraX, 0);
+        if(this.dir === 1) {
+             ctx.scale(-1, 1);
+             ctx.drawImage(images.enemy, -this.x - this.w, this.y, this.w, this.h);
+        } else {
+             ctx.drawImage(images.enemy, this.x, this.y, this.w, this.h);
         }
+        ctx.restore();
+    }
+}
 
-        window.addEventListener("resize", checkOrientation);
-        checkOrientation();
+const player = new Player();
+const chappals = [];
+const enemies = [];
+const platforms = [{x: 0, y: 460, w: LEVEL_WIDTH, h: 40}];
 
-        // =============================
-        // GAME STATE
-        // =============================
-        let aunty = { x: 150, y: 420, width: 120, height: 120, speed: 5 };
-        let chappals = [];
-        let enemies = [];
-        let score = 0;
-        let gameOver = false;
+for (let i = 1; i < 45; i++) {
+    platforms.push({
+        x: i * 220, 
+        y: 180 + Math.random() * 200, 
+        w: 120 + Math.random() * 150, 
+        h: 20
+    });
+}
 
-        let keys = { left: false, right: false };
+for (let i = 0; i < 60; i++) {
+    enemies.push(new Enemy(600 + i * 160, 400, 40 + Math.random() * 120));
+}
 
-        document.addEventListener("keydown", (e) => {
-            if (e.key === "ArrowLeft") keys.left = true;
-            if (e.key === "ArrowRight") keys.right = true;
+const coins = [];
+for (let i = 0; i < 100; i++) {
+    coins.push({
+        x: 400 + i * 100, 
+        y: 120 + Math.random() * 250, 
+        collected: false
+    });
+}
+
+let lastThrow = 0;
+function throwChappal() {
+    const now = Date.now();
+    if (now - lastThrow > 300) { 
+        chappals.push(new Chappal(player.x + (player.facing === 1 ? 40 : -10), player.y + 20, player.facing));
+        lastThrow = now;
+    }
+}
+
+function drawBackground() {
+    const bgX = -(cameraX * 0.3) % V_WIDTH;
+    ctx.drawImage(images.bg, bgX, 0, V_WIDTH, V_HEIGHT);
+    ctx.drawImage(images.bg, bgX + V_WIDTH, 0, V_WIDTH, V_HEIGHT);
+}
+
+function gameLoop() {
+    if (!gameActive) {
+        ctx.fillStyle = "rgba(0,0,0,0.85)";
+        ctx.fillRect(0,0,V_WIDTH,V_HEIGHT);
+        ctx.fillStyle = "white";
+        ctx.font = "bold 28px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("Chhi beta, tumse ye umeed nahi thi!", V_WIDTH/2, V_HEIGHT/2 - 20);
+        ctx.font = "bold 42px Arial";
+        ctx.fillStyle = "#ff4444";
+        ctx.fillText("Game Over", V_WIDTH/2, V_HEIGHT/2 + 40);
+        return;
+    }
+    ctx.clearRect(0, 0, V_WIDTH, V_HEIGHT);
+    drawBackground();
+
+    platforms.forEach(p => {
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(p.x - cameraX, p.y, p.w, p.h);
+    });
+
+    player.update();
+    player.draw();
+
+    for (let i = chappals.length - 1; i >= 0; i--) {
+        const c = chappals[i];
+        c.update();
+        c.draw();
+        enemies.forEach(e => {
+            if (!e.dead && c.x < e.x + e.w && c.x + c.w > e.x && c.y < e.y + e.h && c.y + c.h > e.y) {
+                e.dead = true;
+                c.active = false;
+                score += 50; 
+                scoreEl.innerText = score;
+            }
         });
+        if (!c.active) chappals.splice(i, 1);
+    }
 
-        document.addEventListener("keyup", (e) => {
-            if (e.key === "ArrowLeft") keys.left = false;
-            if (e.key === "ArrowRight") keys.right = false;
-        });
-
-        // MOBILE BUTTONS
-        const moveLeft = document.getElementById("moveLeft");
-        const moveRight = document.getElementById("moveRight");
-        const controls = document.querySelector(".touch-controls");
-
-        function enableMobileControls() {
-            if (window.innerWidth < 900) {
-                controls.style.display = "flex";
+    enemies.forEach(e => {
+        if (!e.dead) {
+            e.update();
+            e.draw();
+            if (player.x < e.x + e.w - 15 && player.x + player.width > e.x + 15 &&
+                player.y < e.y + e.h && player.y + player.height > e.y) {
+                player.takeDamage();
             }
         }
-        enableMobileControls();
+    });
 
-        moveLeft.addEventListener("touchstart", () => keys.left = true);
-        moveLeft.addEventListener("touchend", () => keys.left = false);
-
-        moveRight.addEventListener("touchstart", () => keys.right = true);
-        moveRight.addEventListener("touchend", () => keys.right = false);
-
-        function throwChappal() {
-            chappals.push({ x: aunty.x + aunty.width / 2, y: aunty.y, size: 40 });
+    coins.forEach(c => {
+        if (!c.collected) {
+            ctx.drawImage(images.chai, c.x - cameraX, c.y, 35, 35);
+            if (player.x < c.x + 35 && player.x + player.width > c.x &&
+                player.y < c.y + 35 && player.y + player.height > c.y) {
+                c.collected = true;
+                score += 10;
+                scoreEl.innerText = score;
+            }
         }
+    });
 
-        document.addEventListener("keydown", (e) => {
-            if (e.key === " ") throwChappal();
-        });
+    requestAnimationFrame(gameLoop);
+}
 
-        function spawnEnemy()
+window.onload = () => {
+    loadAssets(gameLoop);
+};
+</script>
+</body>
+</html>
