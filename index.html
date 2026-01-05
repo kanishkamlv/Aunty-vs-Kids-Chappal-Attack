@@ -33,7 +33,6 @@
             justify-content: center;
             align-items: center;
             background: #000;
-            touch-action: none; /* Prevents browser pull-to-refresh and scrolling */
         }
         canvas {
             background: #000;
@@ -106,27 +105,9 @@
         }
         .d-pad { display: flex; gap: 20px; }
         .action-btns { display: flex; gap: 20px; }
-        
-        /* Simple loader overlay */
-        #loader {
-            position: absolute;
-            inset: 0;
-            background: #000;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: #d946ef;
-            z-index: 1000;
-        }
     </style>
 </head>
 <body>
-
-<div id="loader">
-    <div class="text-xl font-bold animate-pulse">LOADING ASSETS...</div>
-    <div class="text-xs mt-2 opacity-50">Please wait, Aunty is getting ready</div>
-</div>
 
 <div id="game-container">
     <div id="ui">
@@ -156,7 +137,6 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const scoreEl = document.getElementById('score');
 const healthFill = document.getElementById('health-fill');
-const loader = document.getElementById('loader');
 
 // Fixed Portrait Resolution
 const V_WIDTH = 500;
@@ -173,41 +153,12 @@ let health = 100;
 let cameraX = 0;
 let gameActive = true;
 
-// ASSET LOADING - Improved logic for mobile stability
-const assets = {
-    aunty: 'aunty.png',
-    chappal: 'chappal.png',
-    kid: 'kid.png',
-    bg: 'portrait.png',
-    chai: 'chai.png'
-};
-
-const images = {};
-let loadedCount = 0;
-const totalAssets = Object.keys(assets).length;
-
-function loadAssets(callback) {
-    for (let key in assets) {
-        images[key] = new Image();
-        images[key].src = assets[key];
-        images[key].onload = () => {
-            loadedCount++;
-            if (loadedCount === totalAssets) {
-                loader.style.display = 'none';
-                callback();
-            }
-        };
-        images[key].onerror = () => {
-            console.error("Failed to load: " + assets[key]);
-            // Fallback: still try to start even if one fails
-            loadedCount++;
-            if (loadedCount === totalAssets) {
-                loader.style.display = 'none';
-                callback();
-            }
-        };
-    }
-}
+// ASSET LOADING - Fixed file paths to match your assets
+const auntyImg = new Image(); auntyImg.src = 'aunty.png';
+const chappalImg = new Image(); chappalImg.src = 'chappal.png';
+const enemyImg = new Image(); enemyImg.src = 'kid.png';
+const bgImg = new Image(); bgImg.src = 'portrait.png'; // Using portrait.png as background
+const chaiImg = new Image(); chaiImg.src = 'chai.png';
 
 function resize() {
     canvas.width = V_WIDTH;
@@ -233,7 +184,6 @@ window.addEventListener('keyup', e => keys[e.code] = false);
 const mobileKeys = { left: false, right: false, up: false };
 function setupTouchBtn(id, keyName) {
     const btn = document.getElementById(id);
-    if(!btn) return;
     btn.addEventListener('touchstart', (e) => { e.preventDefault(); mobileKeys[keyName] = true; });
     btn.addEventListener('touchend', (e) => { e.preventDefault(); mobileKeys[keyName] = false; });
 }
@@ -297,9 +247,9 @@ class Player {
         ctx.translate(-cameraX, 0);
         if (this.facing === -1) {
             ctx.scale(-1, 1);
-            ctx.drawImage(images.aunty, -this.x - this.width, this.y, this.width, this.height);
+            ctx.drawImage(auntyImg, -this.x - this.width, this.y, this.width, this.height);
         } else {
-            ctx.drawImage(images.aunty, this.x, this.y, this.width, this.height);
+            ctx.drawImage(auntyImg, this.x, this.y, this.width, this.height);
         }
         ctx.restore();
     }
@@ -336,7 +286,7 @@ class Chappal {
         ctx.save();
         ctx.translate(this.x + this.w/2 - cameraX, this.y + this.h/2);
         ctx.rotate(this.rotation);
-        ctx.drawImage(images.chappal, -this.w/2, -this.h/2, this.w, this.h);
+        ctx.drawImage(chappalImg, -this.w/2, -this.h/2, this.w, this.h);
         ctx.restore();
     }
 }
@@ -363,9 +313,9 @@ class Enemy {
         ctx.translate(-cameraX, 0);
         if(this.dir === 1) {
              ctx.scale(-1, 1);
-             ctx.drawImage(images.kid, -this.x - this.w, this.y, this.w, this.h);
+             ctx.drawImage(enemyImg, -this.x - this.w, this.y, this.w, this.h);
         } else {
-             ctx.drawImage(images.kid, this.x, this.y, this.w, this.h);
+             ctx.drawImage(enemyImg, this.x, this.y, this.w, this.h);
         }
         ctx.restore();
     }
@@ -408,9 +358,10 @@ function throwChappal() {
 }
 
 function drawBackground() {
+    // Parallax background using portrait.png
     const bgX = -(cameraX * 0.3) % V_WIDTH;
-    ctx.drawImage(images.bg, bgX, 0, V_WIDTH, V_HEIGHT);
-    ctx.drawImage(images.bg, bgX + V_WIDTH, 0, V_WIDTH, V_HEIGHT);
+    ctx.drawImage(bgImg, bgX, 0, V_WIDTH, V_HEIGHT);
+    ctx.drawImage(bgImg, bgX + V_WIDTH, 0, V_WIDTH, V_HEIGHT);
 }
 
 function gameLoop() {
@@ -467,7 +418,7 @@ function gameLoop() {
 
     coins.forEach(c => {
         if (!c.collected) {
-            ctx.drawImage(images.chai, c.x - cameraX, c.y, 35, 35);
+            ctx.drawImage(chaiImg, c.x - cameraX, c.y, 35, 35);
             if (player.x < c.x + 35 && player.x + player.width > c.x &&
                 player.y < c.y + 35 && player.y + player.height > c.y) {
                 c.collected = true;
@@ -480,10 +431,8 @@ function gameLoop() {
     requestAnimationFrame(gameLoop);
 }
 
-// Ensure assets are loaded before starting
-window.onload = () => {
-    loadAssets(gameLoop);
-};
+// Start only when images are loaded or window loads
+window.onload = gameLoop;
 </script>
 </body>
 </html>
