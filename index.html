@@ -157,8 +157,8 @@ const scoreEl = document.getElementById('score');
 const healthFill = document.getElementById('health-fill');
 const loader = document.getElementById('loader');
 
-const V_WIDTH = 800;
-const V_HEIGHT = 500;
+let V_WIDTH = 800;
+let V_HEIGHT = 500;
 
 const GRAVITY = 0.45;
 const JUMP_FORCE = -13;
@@ -208,8 +208,21 @@ function loadAssets(callback) {
 }
 
 function resize() {
+    // Detect portrait mode based on window dimensions
+    const isPortrait = window.innerHeight > window.innerWidth;
+    
+    if (isPortrait) {
+        // Switch internal resolution to portrait-friendly aspect ratio
+        V_WIDTH = 500;
+        V_HEIGHT = 800;
+    } else {
+        V_WIDTH = 800;
+        V_HEIGHT = 500;
+    }
+
     canvas.width = V_WIDTH;
     canvas.height = V_HEIGHT;
+
     if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
         document.getElementById('mobile-ui').style.display = 'flex';
     }
@@ -406,16 +419,18 @@ function throwChappal() {
 }
 
 function drawBackground() {
-    // Check real screen orientation instead of virtual canvas dimensions
+    // Check orientation
     const isPortrait = window.innerHeight > window.innerWidth;
     
-    // Fallback to regular bg if portrait image isn't loaded correctly
     let currentBg = images.bg;
     if (isPortrait && images.bg_portrait && images.bg_portrait.complete && images.bg_portrait.naturalWidth !== 0) {
         currentBg = images.bg_portrait;
     }
     
+    // Parallax background scrolling logic
     const bgX = -(cameraX * 0.3) % V_WIDTH;
+    
+    // Draw background twice for seamless looping
     ctx.drawImage(currentBg, bgX, 0, V_WIDTH, V_HEIGHT);
     ctx.drawImage(currentBg, bgX + V_WIDTH, 0, V_WIDTH, V_HEIGHT);
 }
