@@ -83,10 +83,10 @@
             pointer-events: none;
         }
         .btn {
-            width: 60px;
-            height: 60px;
-            background: rgba(217, 70, 239, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            width: 65px;
+            height: 65px;
+            background: #000000; /* Solid Black Background */
+            border: 2px solid #ffffff; /* White border for visibility */
             border-radius: 50%;
             display: flex;
             justify-content: center;
@@ -95,13 +95,13 @@
             font-weight: bold;
             user-select: none;
             pointer-events: auto;
-            font-size: 16px;
-            backdrop-filter: blur(4px);
+            font-size: 18px;
             -webkit-tap-highlight-color: transparent;
-            transition: transform 0.1s;
+            transition: transform 0.1s, background 0.1s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
         .btn:active { 
-            background: rgba(217, 70, 239, 0.5); 
+            background: #333333; 
             transform: scale(0.9); 
         }
         .d-pad { display: flex; gap: 15px; }
