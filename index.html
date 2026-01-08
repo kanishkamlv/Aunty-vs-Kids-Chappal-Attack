@@ -166,7 +166,7 @@ const GRAVITY = 0.45;
 const JUMP_FORCE = -13;
 const SPEED = 5.5;
 const CHAPPAL_SPEED = 12;
-const LEVEL_WIDTH = 10000;
+const LEVEL_WIDTH = 50000; // Path extended to 50,000 pixels
 
 let score = 0;
 let health = 100;
@@ -193,7 +193,6 @@ function loadAssets(callback) {
         images[key].onload = () => {
             loadedImages++;
             if (loadedImages === totalImages) {
-                // Short delay to ensure user sees the new text
                 setTimeout(() => {
                     loader.style.display = 'none';
                     callback();
@@ -391,21 +390,25 @@ const chappals = [];
 const enemies = [];
 const platforms = [{x: 0, y: 460, w: LEVEL_WIDTH, h: 40}];
 
-for (let i = 1; i < 45; i++) {
+// Proportional scaling for a 50k pixel level
+const platformCount = Math.floor(LEVEL_WIDTH / 225);
+for (let i = 1; i < platformCount; i++) {
     platforms.push({
-        x: i * 220, 
+        x: i * 220 + (Math.random() * 50), 
         y: 180 + Math.random() * 200, 
         w: 120 + Math.random() * 150, 
         h: 20
     });
 }
 
-for (let i = 0; i < 60; i++) {
+const enemyCount = Math.floor(LEVEL_WIDTH / 160);
+for (let i = 0; i < enemyCount; i++) {
     enemies.push(new Enemy(600 + i * 160, 400, 40 + Math.random() * 120));
 }
 
+const flowerCount = Math.floor(LEVEL_WIDTH / 100);
 const flowers = [];
-for (let i = 0; i < 100; i++) {
+for (let i = 0; i < flowerCount; i++) {
     flowers.push({
         x: 400 + i * 100, 
         y: 120 + Math.random() * 250, 
@@ -449,9 +452,12 @@ function gameLoop() {
     ctx.clearRect(0, 0, V_WIDTH, V_HEIGHT);
     drawBackground();
 
+    // Simple culling for performance in a huge level
     platforms.forEach(p => {
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(p.x - cameraX, p.y, p.w, p.h);
+        if (p.x + p.w > cameraX && p.x < cameraX + V_WIDTH) {
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(p.x - cameraX, p.y, p.w, p.h);
+        }
     });
 
     player.update();
@@ -474,23 +480,28 @@ function gameLoop() {
 
     enemies.forEach(e => {
         if (!e.dead) {
-            e.update();
-            e.draw();
-            if (player.x < e.x + e.w - 15 && player.x + player.width > e.x + 15 &&
-                player.y < e.y + e.h && player.y + player.height > e.y) {
-                player.takeDamage();
+            // Cull enemies out of view
+            if (e.x + e.w > cameraX - 100 && e.x < cameraX + V_WIDTH + 100) {
+                e.update();
+                e.draw();
+                if (player.x < e.x + e.w - 15 && player.x + player.width > e.x + 15 &&
+                    player.y < e.y + e.h && player.y + player.height > e.y) {
+                    player.takeDamage();
+                }
             }
         }
     });
 
     flowers.forEach(c => {
         if (!c.collected) {
-            ctx.drawImage(images.sunflower, c.x - cameraX, c.y, 35, 35);
-            if (player.x < c.x + 35 && player.x + player.width > c.x &&
-                player.y < c.y + 35 && player.y + player.height > c.y) {
-                c.collected = true;
-                score += 10;
-                scoreEl.innerText = score;
+            if (c.x + 35 > cameraX && c.x < cameraX + V_WIDTH) {
+                ctx.drawImage(images.sunflower, c.x - cameraX, c.y, 35, 35);
+                if (player.x < c.x + 35 && player.x + player.width > c.x &&
+                    player.y < c.y + 35 && player.y + player.height > c.y) {
+                    c.collected = true;
+                    score += 10;
+                    scoreEl.innerText = score;
+                }
             }
         }
     });
