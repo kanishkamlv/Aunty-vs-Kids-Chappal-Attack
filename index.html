@@ -73,7 +73,7 @@
         }
         .touch-controls {
             position: absolute;
-            bottom: 200px !important; 
+            bottom: 40px; 
             padding: 0 25px;
             left: 0;
             right: 0;
@@ -83,10 +83,10 @@
             pointer-events: none;
         }
         .btn {
-            width: 40px;
-            height: 40px;
-            background: #000000; /* Solid Black Background */
-            border: 2px solid #ffffff; /* White border for visibility */
+            width: 55px;
+            height: 55px;
+            background: #000000; 
+            border: 2px solid #ffffff; 
             border-radius: 50%;
             display: flex;
             justify-content: center;
@@ -129,7 +129,7 @@
 
 <div id="game-container">
     <div id="ui">
-        <div>Chai: <span id="score">0</span></div>
+        <div>Sunflowers: <span id="score">0</span></div>
         <div style="display: flex; flex-direction: column; align-items: flex-end;">
             Health
             <div class="health-bar-bg"><div id="health-fill"></div></div>
@@ -176,10 +176,9 @@ const assetSources = {
     chappal: 'chappal.png',
     enemy: 'kid.png',
     bg: 'building_bg.png',
-    bg_portrait: 'portrait.png',
-    chai: 'chai.png',
+    bg_portrait: 'Portrait.jpg',
+    sunflower: 'chai.png', // Keeping original filename but mapping to sunflower
 };
-
 
 const images = {};
 let loadedImages = 0;
@@ -208,11 +207,9 @@ function loadAssets(callback) {
 }
 
 function resize() {
-    // Detect portrait mode based on window dimensions
     const isPortrait = window.innerHeight > window.innerWidth;
     
     if (isPortrait) {
-        // Switch internal resolution to portrait-friendly aspect ratio
         V_WIDTH = 500;
         V_HEIGHT = 800;
     } else {
@@ -400,9 +397,9 @@ for (let i = 0; i < 60; i++) {
     enemies.push(new Enemy(600 + i * 160, 400, 40 + Math.random() * 120));
 }
 
-const coins = [];
+const flowers = [];
 for (let i = 0; i < 100; i++) {
-    coins.push({
+    flowers.push({
         x: 400 + i * 100, 
         y: 120 + Math.random() * 250, 
         collected: false
@@ -419,18 +416,12 @@ function throwChappal() {
 }
 
 function drawBackground() {
-    // Check orientation
     const isPortrait = window.innerHeight > window.innerWidth;
-    
     let currentBg = images.bg;
     if (isPortrait && images.bg_portrait && images.bg_portrait.complete && images.bg_portrait.naturalWidth !== 0) {
         currentBg = images.bg_portrait;
     }
-    
-    // Parallax background scrolling logic
     const bgX = -(cameraX * 0.3) % V_WIDTH;
-    
-    // Draw background twice for seamless looping
     ctx.drawImage(currentBg, bgX, 0, V_WIDTH, V_HEIGHT);
     ctx.drawImage(currentBg, bgX + V_WIDTH, 0, V_WIDTH, V_HEIGHT);
 }
@@ -485,9 +476,9 @@ function gameLoop() {
         }
     });
 
-    coins.forEach(c => {
+    flowers.forEach(c => {
         if (!c.collected) {
-            ctx.drawImage(images.chai, c.x - cameraX, c.y, 35, 35);
+            ctx.drawImage(images.sunflower, c.x - cameraX, c.y, 35, 35);
             if (player.x < c.x + 35 && player.x + player.width > c.x &&
                 player.y < c.y + 35 && player.y + player.height > c.y) {
                 c.collected = true;
